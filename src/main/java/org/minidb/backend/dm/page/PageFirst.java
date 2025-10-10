@@ -1,5 +1,10 @@
 package org.minidb.backend.dm.page;
 
+import org.minidb.backend.utils.RandomUtil;
+import org.minidb.common.constant.PageConstant;
+
+import java.util.Arrays;
+
 /**
  * 特殊管理第一页
  * ValidCheck
@@ -7,38 +12,72 @@ package org.minidb.backend.dm.page;
  * 用于判断上一次数据库是否正常关闭
  */
 public class PageFirst {
-    private static final int OF_VC = 100;
-    private static final int LEN_VC = 8;
 
+    /**
+     * 初始化一个页面大小的字节数组
+     * @return
+     */
     public static byte[] InitRaw() {
-        byte[] raw = new byte[PageCache.PAGE_SIZE];
-        setVcOpen(raw);
+        byte[] raw = new byte[PageConstant.PAGE_SIZE];
+        setValidCheckStart(raw);
         return raw;
     }
 
-    public static void setVcOpen(Page pg) {
-        pg.setDirty(true);
-        setVcOpen(pg.getData());
+    /**
+     *在db文件启动时，为页面特定位置设置合法检查
+     * @param page
+     */
+    public static void setValidCheckStart(Page page) {
+        page.setPageDirty(true);
+        setValidCheckStart(page.getPageData());
     }
 
-    private static void setVcOpen(byte[] raw) {
-        System.arraycopy(RandomUtil.randomBytes(LEN_VC), 0, raw, OF_VC, LEN_VC);
+    /**
+     * 在db文件启动时，为页面特定位置设置合法检查
+     * @param raw
+     */
+    private static void setValidCheckStart(byte[] raw) {
+        System.arraycopy(RandomUtil.randomBytes(PageConstant.LENGTH_VALID_CHECK), 0,
+                raw, PageConstant.VALID_CHECK_OFFSET, PageConstant.LENGTH_VALID_CHECK);
     }
 
-    public static void setVcClose(Page pg) {
-        pg.setDirty(true);
-        setVcClose(pg.getData());
+    /**
+     * 在db文件关闭时，为页面特定位置设置合法检查
+     * @param page
+     */
+    public static void setValidCheckClose(Page page) {
+        page.setPageDirty(true);
+        setValidCheckClose(page.getPageData());
     }
 
-    private static void setVcClose(byte[] raw) {
-        System.arraycopy(raw, OF_VC, raw, OF_VC+LEN_VC, LEN_VC);
+    /**
+     * 在db文件关闭时，为页面特定位置设置合法检查
+     * @param raw
+     */
+    private static void setValidCheckClose(byte[] raw) {
+        System.arraycopy(raw, PageConstant.VALID_CHECK_OFFSET, raw,
+                PageConstant.VALID_CHECK_OFFSET+PageConstant.LENGTH_VALID_CHECK, PageConstant.LENGTH_VALID_CHECK);
     }
 
-    public static boolean checkVc(Page pg) {
-        return checkVc(pg.getData());
+    /**
+     * 判断上一次数据库是否正常关闭
+     * @param page
+     * @return
+     */
+    public static boolean ValidCheck(Page page) {
+        return ValidCheck(page.getPageData());
     }
 
-    private static boolean checkVc(byte[] raw) {
-        return Arrays.equals(Arrays.copyOfRange(raw, OF_VC, OF_VC+LEN_VC), Arrays.copyOfRange(raw, OF_VC+LEN_VC, OF_VC+2*LEN_VC));
+    /**
+     * 判断上一次数据库是否正常关闭
+     * @param raw
+     * @return
+     */
+    private static boolean ValidCheck(byte[] raw) {
+        byte[] openArray = Arrays.copyOfRange(raw, PageConstant.VALID_CHECK_OFFSET,
+                PageConstant.VALID_CHECK_OFFSET + PageConstant.LENGTH_VALID_CHECK);
+        byte[] closeArray = Arrays.copyOfRange(raw, PageConstant.VALID_CHECK_OFFSET+PageConstant.LENGTH_VALID_CHECK,
+                PageConstant.VALID_CHECK_OFFSET + 2 * PageConstant.LENGTH_VALID_CHECK);
+        return Arrays.equals(openArray, closeArray);
     }
 }

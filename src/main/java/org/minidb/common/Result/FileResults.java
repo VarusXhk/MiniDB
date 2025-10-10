@@ -1,0 +1,42 @@
+package org.minidb.common.Result;
+
+import org.minidb.backend.utils.Panic;
+import org.minidb.common.constant.TransactionConstant;
+
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+
+public class FileResults {
+
+    private FileChannel fc;
+
+    private RandomAccessFile raf;
+
+    public FileResults(FileChannel fileChannel, RandomAccessFile randomAccessFile) {
+        this.fc = fileChannel;
+        this.raf = randomAccessFile;
+    }
+
+    public FileChannel getFileChannel() {
+        return fc;
+    }
+    public RandomAccessFile getRandomAccessFile() {
+        return raf;
+    }
+
+    /**
+     * 向空文件写入文件头
+     * @param header_length
+     */
+    public void WriteHeader(int header_length) {
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[header_length]);
+        try {
+            this.fc.position(0);
+            this.fc.write(buffer);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+    }
+}

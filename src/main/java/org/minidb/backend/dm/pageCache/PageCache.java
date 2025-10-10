@@ -1,66 +1,57 @@
 package org.minidb.backend.dm.pageCache;
 
 import org.minidb.backend.dm.page.Page;
+import org.minidb.backend.utils.FileIOUtil;
 import org.minidb.backend.utils.Panic;
+import org.minidb.common.constant.MessageConstant;
+import org.minidb.common.constant.PageConstant;
+import org.minidb.common.exception.FileExistsException;
+import org.minidb.common.exception.FileNotExistException;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 
 public interface PageCache {
-    public static final int PAGE_SIZE = 1 << 13;
 
     int newPage(byte[] initData);
-    Page getPage(int pgno) throws Exception;
-    void close();
+    Page getPage(int pageNumber) throws Exception;
     void release(Page page);
+    void closeCache(Page page);
 
-    void truncateByBgno(int maxPgno);
+    void truncateByPgNumber(int maxPageNumber);
     int getPageNumber();
-    void flushPage(Page pg);
+    void flushPage(Page page);
 
-    public static PageCacheImpl create(String path, long memory) {
-        File f = new File(path+PageCacheImpl.DB_SUFFIX);
+    /**
+     * 在db数据库不存在时，创建db文件和页面缓存
+     * @param path
+     * @param memory
+     * @return
+     */
+    static PageCacheImpl createPageCache(String path, long memory) {
+        File dbFile = new File(path+ PageConstant.DB_SUFFIX);
+
         try {
-            if(!f.createNewFile()) {
-                Panic.panic(Error.FileExistsException);
+            if(!dbFile.createNewFile()) {
+                throw new FileExistsException(MessageConstant.FILE_EXIST);
             }
         } catch (Exception e) {
             Panic.panic(e);
         }
-        if(!f.canRead() || !f.canWrite()) {
-            Panic.panic(Error.FileCannotRWException);
-        }
 
-        FileChannel fc = null;
-        RandomAccessFile raf = null;
-        try {
-            raf = new RandomAccessFile(f, "rw");
-            fc = raf.getChannel();
-        } catch (FileNotFoundException e) {
-            Panic.panic(e);
-        }
-        return new PageCacheImpl(raf, fc, (int)memory/PAGE_SIZE);
+        return new PageCacheImpl(FileIOUtil.fileHandle(dbFile), (int)memory/PageConstant.PAGE_SIZE);
     }
 
-    public static PageCacheImpl open(String path, long memory) {
-        File f = new File(path+PageCacheImpl.DB_SUFFIX);
-        if(!f.exists()) {
-            Panic.panic(Error.FileNotExistsException);
+    /**
+     * 在db数据库存在时，依据db文件创建页面缓存
+     * @param path
+     * @param memory
+     * @return
+     */
+    static PageCacheImpl openPageCache(String path, long memory) {
+        File dbFile = new File(path+PageConstant.DB_SUFFIX);
+        if(!dbFile.exists()) {
+            throw new FileNotExistException(MessageConstant.FILE_NOT_EXIST);
         }
-        if(!f.canRead() || !f.canWrite()) {
-            Panic.panic(Error.FileCannotRWException);
-        }
-
-        FileChannel fc = null;
-        RandomAccessFile raf = null;
-        try {
-            raf = new RandomAccessFile(f, "rw");
-            fc = raf.getChannel();
-        } catch (FileNotFoundException e) {
-            Panic.panic(e);
-        }
-        return new PageCacheImpl(raf, fc, (int)memory/PAGE_SIZE);
+        return new PageCacheImpl(FileIOUtil.fileHandle(dbFile), (int)memory/PageConstant.PAGE_SIZE);
     }
 }

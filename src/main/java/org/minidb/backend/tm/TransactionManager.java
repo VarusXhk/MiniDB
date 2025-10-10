@@ -1,17 +1,15 @@
 package org.minidb.backend.tm;
 
+import org.minidb.backend.utils.FileIOUtil;
 import org.minidb.backend.utils.Panic;
+import org.minidb.common.Result.FileResults;
 import org.minidb.common.constant.MessageConstant;
 import org.minidb.common.constant.TransactionConstant;
-import org.minidb.common.exception.FileCannotRWException;
 import org.minidb.common.exception.FileExistsException;
+import org.minidb.common.exception.FileNotExistException;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
 
 public interface TransactionManager {
@@ -32,41 +30,20 @@ public interface TransactionManager {
      */
     static TransactionManagerImpl createTransactionManager(String path){
         File xidFile = new File(path+ TransactionConstant.XID_SUFFIX);
-
-        // 检查文件是否已存在及读写功能正常与否
+        // 检查文件是否已存在
         try {
             if (!xidFile.createNewFile()) {
                 throw new FileExistsException(MessageConstant.FILE_EXIST);
             }
         }catch (IOException e){
             Panic.panic(e);
-            //throw new FileIOException(MessageConstant.FILE_IO_EXCEPTION);
         }
 
-        if (!xidFile.canWrite() || !xidFile.canRead()) {
-            throw new FileCannotRWException(MessageConstant.FILE_CANNOT_RW);
-        }
-
-        FileChannel fileChannel = null;
-        RandomAccessFile randomAccessFile = null;
-        try {
-            randomAccessFile = new RandomAccessFile(xidFile, "rw");
-            fileChannel = randomAccessFile.getChannel();
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
+        FileResults fileResults = FileIOUtil.fileHandle(xidFile);
         // 写空XID文件头
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[TransactionConstant.XID_HEADER_LENGTH]);
-        try {
-            fileChannel.position(0);
-            fileChannel.write(buffer);
-        } catch (IOException e) {
-            Panic.panic(e);
-            //throw new FileIOException(MessageConstant.FILE_IO_EXCEPTION);
-        }
+        fileResults.WriteHeader(TransactionConstant.XID_HEADER_LENGTH);
 
-        return new TransactionManagerImpl(randomAccessFile, fileChannel);
+        return new TransactionManagerImpl(fileResults);
     }
 
     /**
@@ -77,21 +54,8 @@ public interface TransactionManager {
     static TransactionManagerImpl openTransactionManager(String path){
         File xidFile = new File(path+TransactionConstant.XID_SUFFIX);
         if(!xidFile.exists()) {
-            throw new FileCannotRWException(MessageConstant.FILE_NOT_EXIST);
+            throw new FileNotExistException(MessageConstant.FILE_NOT_EXIST);
         }
-        if(!xidFile.canRead() || !xidFile.canWrite()) {
-            throw new FileCannotRWException(MessageConstant.FILE_CANNOT_RW);
-        }
-
-        FileChannel fileChannel = null;
-        RandomAccessFile randomAccessFile = null;
-        try {
-            randomAccessFile = new RandomAccessFile(xidFile, "rw");
-            fileChannel = randomAccessFile.getChannel();
-        } catch (FileNotFoundException e) {
-            Panic.panic(e);
-        }
-
-        return new TransactionManagerImpl(randomAccessFile, fileChannel);
+        return new TransactionManagerImpl(FileIOUtil.fileHandle(xidFile));
     }
 }

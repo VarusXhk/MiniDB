@@ -6,11 +6,15 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class PageImpl implements Page{
+    //页面页号
     private int pageNumber;
+    //页面实际数据
     private byte[] data;
+    //标志脏页
     private boolean dirty;
+    //并发锁
     private Lock lock;
-
+    //页面缓存的引用
     private PageCache pc;
 
     public PageImpl(int pageNumber, byte[] data, PageCache pc) {
@@ -28,23 +32,23 @@ public class PageImpl implements Page{
         lock.unlock();
     }
 
-    public void release() {
+    public void releasePage() {
         pc.release(this);
     }
 
-    public void setDirty(boolean dirty) {
+    public void setPageDirty(boolean dirty) {
         this.dirty = dirty;
     }
 
     public boolean isDirty() {
-        return dirty;
+        return this.dirty;
     }
 
     public int getPageNumber() {
         return pageNumber;
     }
 
-    public byte[] getData() {
+    public byte[] getPageData() {
         return data;
     }
 }

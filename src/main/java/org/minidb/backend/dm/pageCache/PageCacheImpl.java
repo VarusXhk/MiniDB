@@ -1,7 +1,13 @@
 package org.minidb.backend.dm.pageCache;
 
+import org.minidb.backend.common.AbstractCache;
 import org.minidb.backend.dm.page.Page;
+import org.minidb.backend.dm.page.PageImpl;
 import org.minidb.backend.utils.Panic;
+import org.minidb.common.Result.FileResults;
+import org.minidb.common.constant.MessageConstant;
+import org.minidb.common.constant.PageConstant;
+import org.minidb.common.exception.MemoryShortageException;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -9,90 +15,128 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class PageCacheImpl {
-    private static final int MEM_MIN_LIM = 10;
-    public static final String DB_SUFFIX = ".db";
+public class PageCacheImpl extends AbstractCache<Page> implements PageCache{
 
-    private RandomAccessFile file;
+    private RandomAccessFile raf;
     private FileChannel fc;
     private Lock fileLock;
-
     private AtomicInteger pageNumbers;
 
-    PageCacheImpl(RandomAccessFile file, FileChannel fileChannel, int maxResource) {
+    PageCacheImpl(FileResults fileResults, int maxResource) {
+        // 调用父类AbstractCache的构造方法
         super(maxResource);
-        if(maxResource < MEM_MIN_LIM) {
-            Panic.panic(Error.MemTooSmallException);
+        if(maxResource < PageConstant.MEMORY_MIN_LIMIT) {
+            throw new MemoryShortageException(MessageConstant.MEMORY_SHORTAGE);
         }
         long length = 0;
         try {
-            length = file.length();
+            length = raf.length();
         } catch (IOException e) {
             Panic.panic(e);
         }
-        this.file = file;
-        this.fc = fileChannel;
+        this.raf = fileResults.getRandomAccessFile();
+        this.fc = fileResults.getFileChannel();
         this.fileLock = new ReentrantLock();
-        this.pageNumbers = new AtomicInteger((int)length / PAGE_SIZE);
-    }
-
-    public int newPage(byte[] initData) {
-        int pgno = pageNumbers.incrementAndGet();
-        Page pg = new PageImpl(pgno, initData, null);
-        flush(pg);
-        return pgno;
-    }
-
-    public Page getPage(int pgno) throws Exception {
-        return get((long)pgno);
+        this.pageNumbers = new AtomicInteger((int)length / PageConstant.PAGE_SIZE);
     }
 
     /**
-     * 根据pageNumber从数据库文件中读取页数据，并包裹成Page
+     * 根据页面编号从数据库文件中读取页数据，并包裹成Page
+     * 并不会写入缓存
      */
     @Override
-    protected Page getForCache(long key) throws Exception {
-        int pgno = (int)key;
-        long offset = PageCacheImpl.pageOffset(pgno);
-
-        ByteBuffer buf = ByteBuffer.allocate(PAGE_SIZE);
+    protected Page get2Cache(long key) throws Exception {
+        int pageNumber = (int)key;
+        long offset = pageOffset(pageNumber);
         fileLock.lock();
+        ByteBuffer buffer = ByteBuffer.allocate(PageConstant.PAGE_SIZE);
         try {
             fc.position(offset);
-            fc.read(buf);
+            fc.read(buffer);
         } catch(IOException e) {
             Panic.panic(e);
+        } finally {
+            fileLock.unlock();
         }
-        fileLock.unlock();
-        return new PageImpl(pgno, buf.array(), this);
+        return new PageImpl(pageNumber, buffer.array(), this);
     }
 
+    /**
+     * 若页面被标记为脏页，则写回文件系统
+     * @param page
+     */
     @Override
-    protected void releaseForCache(Page pg) {
-        if(pg.isDirty()) {
-            flush(pg);
-            pg.setDirty(false);
+    protected void releaseByObj(Page page) {
+        if(page.isDirty()) {
+            flush(page);
+            page.setPageDirty(false);
         }
     }
 
+    /**
+     * 创建一个页面并写回文件系统
+     * @param initData
+     * @return
+     */
+    public int newPage(byte[] initData) {
+        int pageNumber = pageNumbers.incrementAndGet();
+        Page page = new PageImpl(pageNumber, initData, null);
+        flush(page);
+        return pageNumber;
+    }
+
+    /**
+     * 根据页面编号从缓存中获取页面
+     * @param pageNumber
+     * @return
+     * @throws Exception
+     */
+    public Page getPage(int pageNumber) throws Exception {
+        return getFromCache((long)pageNumber);
+    }
+
+    /**
+     * 减少对页面的一个引用
+     * @param page
+     */
     public void release(Page page) {
-        release((long)page.getPageNumber());
+        releaseReferenceByKey((long)page.getPageNumber());
     }
 
-    public void flushPage(Page pg) {
-        flush(pg);
+    /**
+     * 关闭缓存
+     * @param page
+     */
+    @Override
+    public void closeCache(Page page) {
+        super.closeCache();
+        try {
+            fc.close();
+            raf.close();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
     }
 
-    private void flush(Page pg) {
-        int pgno = pg.getPageNumber();
-        long offset = pageOffset(pgno);
+    /**
+     * 将文件写回文件系统
+     * @param page
+     */
+    public void flushPage(Page page) {
+        flush(page);
+    }
+
+    private void flush(Page page) {
+        int pageNumber = page.getPageNumber();
+        long offset = pageOffset(pageNumber);
 
         fileLock.lock();
         try {
-            ByteBuffer buf = ByteBuffer.wrap(pg.getData());
+            ByteBuffer buffer = ByteBuffer.wrap(page.getPageData());
             fc.position(offset);
-            fc.write(buf);
+            fc.write(buffer);
             fc.force(false);
         } catch(IOException e) {
             Panic.panic(e);
@@ -101,32 +145,32 @@ public class PageCacheImpl {
         }
     }
 
-    public void truncateByBgno(int maxPgno) {
-        long size = pageOffset(maxPgno + 1);
+    /**
+     * 根据给定的最大页面编号对文件进行裁剪
+     * @param maxPageNumber
+     */
+    public void truncateByPgNumber(int maxPageNumber) {
+        long size = pageOffset(maxPageNumber + 1);
         try {
-            file.setLength(size);
+            raf.setLength(size);
         } catch (IOException e) {
             Panic.panic(e);
         }
-        pageNumbers.set(maxPgno);
+        pageNumbers.set(maxPageNumber);
     }
 
-    @Override
-    public void close() {
-        super.close();
-        try {
-            fc.close();
-            file.close();
-        } catch (IOException e) {
-            Panic.panic(e);
-        }
-    }
-
+    /**
+     * 计算页面编号
+     */
     public int getPageNumber() {
         return pageNumbers.intValue();
     }
 
-    private static long pageOffset(int pgno) {
-        return (pgno-1) * PAGE_SIZE;
+    /**
+     * 通过页面编号计算页面偏移量
+     * @param pageNumber
+     */
+    private static long pageOffset(int pageNumber) {
+        return (long) (pageNumber - 1) * PageConstant.PAGE_SIZE;
     }
 }

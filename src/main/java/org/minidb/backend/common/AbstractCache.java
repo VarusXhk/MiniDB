@@ -151,4 +151,5 @@ public abstract class AbstractCache<T> {
      * 根据资源数据，将资源从缓存移除写入外部
      */
     protected abstract void releaseByObj(T obj);
+
 }

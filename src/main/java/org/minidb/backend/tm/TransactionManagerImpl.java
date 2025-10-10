@@ -1,6 +1,7 @@
 package org.minidb.backend.tm;
 
 import org.minidb.backend.utils.Panic;
+import org.minidb.common.Result.FileResults;
 import org.minidb.common.constant.MessageConstant;
 import org.minidb.common.constant.TransactionConstant;
 import org.minidb.backend.utils.Parser;
@@ -21,9 +22,9 @@ public class TransactionManagerImpl implements TransactionManager {
     private Lock counterLock;
 
 
-    TransactionManagerImpl(RandomAccessFile raf, FileChannel fileChannel) {
-        this.randomAccessFile = raf;
-        this.fileChannel = fileChannel;
+    TransactionManagerImpl(FileResults fileResults) {
+        this.fileChannel = fileResults.getFileChannel();
+        this.randomAccessFile = fileResults.getRandomAccessFile();
         counterLock = new ReentrantLock();
         checkXIDCounter();
     }
