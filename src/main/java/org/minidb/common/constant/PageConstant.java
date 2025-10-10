@@ -8,5 +8,5 @@ public class PageConstant {
     public static final int LENGTH_VALID_CHECK = 8;
     public static final short FREE_OFFSET = 0;
     public static final short DATA_OFFSET = 2;
-    public static final int MAX_FREE_SPACE = PAGE_SIZE - DATA_OFFSET;
+    //public static final int MAX_FREE_SPACE = PAGE_SIZE - DATA_OFFSET;
 }

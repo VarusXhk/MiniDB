@@ -41,7 +41,7 @@ public interface TransactionManager {
 
         FileResults fileResults = FileIOUtil.fileHandle(xidFile);
         // 写空XID文件头
-        fileResults.WriteHeader(TransactionConstant.XID_HEADER_LENGTH);
+        fileResults.WriteHeader(new byte[TransactionConstant.XID_HEADER_LENGTH]);
 
         return new TransactionManagerImpl(fileResults);
     }

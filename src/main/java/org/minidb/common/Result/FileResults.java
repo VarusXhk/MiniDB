@@ -28,13 +28,14 @@ public class FileResults {
 
     /**
      * 向空文件写入文件头
-     * @param header_length
+     * @param array
      */
-    public void WriteHeader(int header_length) {
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[header_length]);
+    public void WriteHeader(byte[] array) {
+        ByteBuffer buffer = ByteBuffer.wrap(array);
         try {
             this.fc.position(0);
             this.fc.write(buffer);
+            fc.force(false);
         } catch (IOException e) {
             Panic.panic(e);
         }

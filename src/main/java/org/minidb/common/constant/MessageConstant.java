@@ -9,7 +9,6 @@ public class MessageConstant {
     public static final String FILE_EXIST = "文件已存在";
     public static final String FILE_NOT_EXIST = "该文件不存在";
     public static final String FILE_CANNOT_RW = "该文件不具备读写功能";
-    //public static final String FILE_IO_EXCEPTION = "对文件进行IO操作时异常";
 
     // Messages in Data Manager
     public static final String BAD_LOG_FILE = "日志文件已损坏";

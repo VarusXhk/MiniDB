@@ -3,7 +3,7 @@ package org.minidb.backend.utils;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import com.google.common.primitives.Bytes;
+//import com.google.common.primitives.Bytes;
 
 public class Parser {
     public static byte[] short2Byte(short value) {
@@ -39,9 +39,12 @@ public class Parser {
         return new ParseStringRes(str, length+4);
     }
 
+//    public static byte[] string2Byte(String str) {
+//        byte[] l = int2Byte(str.length());
+//        return Bytes.concat(l, str.getBytes());
+//    }
     public static byte[] string2Byte(String str) {
-        byte[] l = int2Byte(str.length());
-        return Bytes.concat(l, str.getBytes());
+        return ArrayUtil.concatArray(int2Byte(str.length()), str.getBytes());
     }
 
     public static long str2Uid(String key) {

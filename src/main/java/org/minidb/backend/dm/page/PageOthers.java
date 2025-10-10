@@ -85,6 +85,7 @@ public class PageOthers {
         System.arraycopy(raw, 0, page.getPageData(), offset, raw.length);
 
         short rawFSO = getFreeSpaceOffset(page.getPageData());
+        //如果数据库崩溃前已经写入一些数据，在恢复时再将全部数据写入会导致如下情况
         if(rawFSO < offset + raw.length) {
             setFreeSpaceOffset(page.getPageData(), (short)(offset+raw.length));
         }
