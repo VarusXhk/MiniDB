@@ -1,11 +1,11 @@
 package org.minidb.backend.dm.pageIndex;
 
 public class PageInfo {
-    public int pgno;
+    public int pageNumber;
     public int freeSpace;
 
-    public PageInfo(int pgno, int freeSpace) {
-        this.pgno = pgno;
+    public PageInfo(int pageNumber, int freeSpace) {
+        this.pageNumber = pageNumber;
         this.freeSpace = freeSpace;
     }
 }

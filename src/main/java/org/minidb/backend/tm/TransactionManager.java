@@ -4,7 +4,7 @@ import org.minidb.backend.utils.FileIOUtil;
 import org.minidb.backend.utils.Panic;
 import org.minidb.common.Result.FileResults;
 import org.minidb.common.constant.MessageConstant;
-import org.minidb.common.constant.TransactionConstant;
+import org.minidb.common.constant.TMConstant;
 import org.minidb.common.exception.FileExistsException;
 import org.minidb.common.exception.FileNotExistException;
 
@@ -29,7 +29,7 @@ public interface TransactionManager {
      * @return
      */
     static TransactionManagerImpl createTransactionManager(String path){
-        File xidFile = new File(path+ TransactionConstant.XID_SUFFIX);
+        File xidFile = new File(path+ TMConstant.XID_SUFFIX);
         // 检查文件是否已存在
         try {
             if (!xidFile.createNewFile()) {
@@ -41,7 +41,7 @@ public interface TransactionManager {
 
         FileResults fileResults = FileIOUtil.fileHandle(xidFile);
         // 写空XID文件头
-        fileResults.WriteHeader(new byte[TransactionConstant.XID_HEADER_LENGTH]);
+        fileResults.WriteHeader(new byte[TMConstant.XID_HEADER_LENGTH]);
 
         return new TransactionManagerImpl(fileResults);
     }
@@ -52,7 +52,7 @@ public interface TransactionManager {
      * @return
      */
     static TransactionManagerImpl openTransactionManager(String path){
-        File xidFile = new File(path+TransactionConstant.XID_SUFFIX);
+        File xidFile = new File(path+ TMConstant.XID_SUFFIX);
         if(!xidFile.exists()) {
             throw new FileNotExistException(MessageConstant.FILE_NOT_EXIST);
         }

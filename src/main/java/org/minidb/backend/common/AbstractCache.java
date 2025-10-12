@@ -1,5 +1,6 @@
 package org.minidb.backend.common;
 
+import org.minidb.backend.dm.dataItem.DataItem;
 import org.minidb.common.constant.MessageConstant;
 import org.minidb.common.exception.CacheFullException;
 
@@ -151,5 +152,4 @@ public abstract class AbstractCache<T> {
      * 根据资源数据，将资源从缓存移除写入外部
      */
     protected abstract void releaseByObj(T obj);
-
 }

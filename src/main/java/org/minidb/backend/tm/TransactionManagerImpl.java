@@ -3,7 +3,7 @@ package org.minidb.backend.tm;
 import org.minidb.backend.utils.Panic;
 import org.minidb.common.Result.FileResults;
 import org.minidb.common.constant.MessageConstant;
-import org.minidb.common.constant.TransactionConstant;
+import org.minidb.common.constant.TMConstant;
 import org.minidb.backend.utils.Parser;
 import org.minidb.common.exception.BadXidFileException;
 
@@ -38,11 +38,11 @@ public class TransactionManagerImpl implements TransactionManager {
             throw new BadXidFileException(MessageConstant.BAD_XID_FILE);
         }
 
-        if(fileLength < TransactionConstant.XID_HEADER_LENGTH) {
+        if(fileLength < TMConstant.XID_HEADER_LENGTH) {
             throw new BadXidFileException(MessageConstant.BAD_XID_FILE);
         }
 
-        ByteBuffer buffer = ByteBuffer.allocate(TransactionConstant.XID_HEADER_LENGTH);
+        ByteBuffer buffer = ByteBuffer.allocate(TMConstant.XID_HEADER_LENGTH);
         try {
             fileChannel.position(0);
             fileChannel.read(buffer);
@@ -58,13 +58,13 @@ public class TransactionManagerImpl implements TransactionManager {
 
     // 根据事务xid取得其在xid文件中对应的位置
     private long getXIDPosition(long xid) {
-        return TransactionConstant.XID_HEADER_LENGTH + (xid-1) * TransactionConstant.XID_FIELD_SIZE;
+        return TMConstant.XID_HEADER_LENGTH + (xid-1) * TMConstant.XID_FIELD_SIZE;
     }
 
     // 更新xid事务的状态为status
     private void updateXID(long xid, byte status) {
         long offset = getXIDPosition(xid);
-        byte[] tmp = new byte[TransactionConstant.XID_FIELD_SIZE];
+        byte[] tmp = new byte[TMConstant.XID_FIELD_SIZE];
         tmp[0] = status;
         ByteBuffer buffer = ByteBuffer.wrap(tmp);
         try {
@@ -83,7 +83,7 @@ public class TransactionManagerImpl implements TransactionManager {
     // 检测XID事务是否处于status状态
     private boolean checkXID(long xid, byte status) {
         long offset = getXIDPosition(xid);
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[TransactionConstant.XID_FIELD_SIZE]);
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[TMConstant.XID_FIELD_SIZE]);
         try {
             fileChannel.position(offset);
             fileChannel.read(buffer);
@@ -115,7 +115,7 @@ public class TransactionManagerImpl implements TransactionManager {
         counterLock.lock();
         try {
             long xid = XIDCounter + 1;
-            updateXID(xid, TransactionConstant.TRANSACTION_ACTIVE);
+            updateXID(xid, TMConstant.TRANSACTION_ACTIVE);
             incrXIDCounter();
             return xid;
         } finally {
@@ -125,27 +125,27 @@ public class TransactionManagerImpl implements TransactionManager {
 
     // 提交XID事务
     public void commitTransaction(long xid) {
-        updateXID(xid, TransactionConstant.TRANSACTION_COMMITTED);
+        updateXID(xid, TMConstant.TRANSACTION_COMMITTED);
     }
 
     // 回滚XID事务
     public void abortTransaction(long xid) {
-        updateXID(xid, TransactionConstant.TRANSACTION_ABORTED);
+        updateXID(xid, TMConstant.TRANSACTION_ABORTED);
     }
 
     public boolean isActive(long xid) {
-        if(xid == TransactionConstant.SUPER_XID) return false;
-        return checkXID(xid, TransactionConstant.TRANSACTION_ACTIVE);
+        if(xid == TMConstant.SUPER_XID) return false;
+        return checkXID(xid, TMConstant.TRANSACTION_ACTIVE);
     }
 
     public boolean isCommitted(long xid) {
-        if(xid == TransactionConstant.SUPER_XID) return true;
-        return checkXID(xid, TransactionConstant.TRANSACTION_COMMITTED);
+        if(xid == TMConstant.SUPER_XID) return true;
+        return checkXID(xid, TMConstant.TRANSACTION_COMMITTED);
     }
 
     public boolean isAborted(long xid) {
-        if(xid == TransactionConstant.SUPER_XID) return false;
-        return checkXID(xid, TransactionConstant.TRANSACTION_ABORTED);
+        if(xid == TMConstant.SUPER_XID) return false;
+        return checkXID(xid, TMConstant.TRANSACTION_ABORTED);
     }
 
     public void closeTransaction() {

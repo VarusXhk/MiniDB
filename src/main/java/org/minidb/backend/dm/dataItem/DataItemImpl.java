@@ -3,6 +3,7 @@ package org.minidb.backend.dm.dataItem;
 import org.minidb.backend.common.SubArray;
 import org.minidb.backend.dm.DataManagerImpl;
 import org.minidb.backend.dm.page.Page;
+import org.minidb.common.constant.DataItemConstant;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -15,19 +16,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * DataSize  2字节，标识Data的长度
  */
 public class DataItemImpl implements DataItem{
-    static final int OF_VALID = 0;
-    static final int OF_SIZE = 1;
-    static final int OF_DATA = 3;
 
     private SubArray raw;
     private byte[] oldRaw;
+    // 读锁
     private Lock rLock;
+    // 写锁
     private Lock wLock;
     private DataManagerImpl dm;
     private long uid;
-    private Page pg;
+    private Page page;
 
-    public DataItemImpl(SubArray raw, byte[] oldRaw, Page pg, long uid, DataManagerImpl dm) {
+    public DataItemImpl(SubArray raw, byte[] oldRaw, Page page, long uid, DataManagerImpl dm) {
         this.raw = raw;
         this.oldRaw = oldRaw;
         ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -35,33 +35,47 @@ public class DataItemImpl implements DataItem{
         wLock = lock.writeLock();
         this.dm = dm;
         this.uid = uid;
-        this.pg = pg;
+        this.page = page;
     }
 
     public boolean isValid() {
-        return raw.raw[raw.start+OF_VALID] == (byte)0;
+        return raw.data[raw.start + DataItemConstant.VALID_OFFSET] == (byte)0;
     }
 
+    /**
+     * 获取Data Item的数据
+     * @return
+     */
     @Override
-    public SubArray data() {
-        return new SubArray(raw.raw, raw.start+OF_DATA, raw.end);
+    public SubArray getData() {
+        return new SubArray(raw.start + DataItemConstant.DATA_OFFSET, raw.end, raw.data);
     }
 
+    /**
+     * 对Data Item进行写操作时需要做的前置工作
+     */
     @Override
-    public void before() {
+    public void writePrepare() {
         wLock.lock();
-        pg.setPageDirty(true);
-        System.arraycopy(raw.raw, raw.start, oldRaw, 0, oldRaw.length);
+        page.setPageDirty(true);
+        System.arraycopy(raw.data, raw.start, oldRaw, 0, oldRaw.length);
     }
 
+    /**
+     * 对Data Item进行撤销写操作时需要做的前置工作
+     */
     @Override
-    public void unBefore() {
-        System.arraycopy(oldRaw, 0, raw.raw, raw.start, oldRaw.length);
+    public void undoPrepare() {
+        System.arraycopy(oldRaw, 0, raw.data, raw.start, oldRaw.length);
         wLock.unlock();
     }
 
+    /**
+     * 对Data Item进行写操作后需要做的工作，保证整体操作的原子性
+     * @param xid
+     */
     @Override
-    public void after(long xid) {
+    public void writeAfter(long xid) {
         dm.logDataItem(xid, this);
         wLock.unlock();
     }
@@ -92,8 +106,8 @@ public class DataItemImpl implements DataItem{
     }
 
     @Override
-    public Page page() {
-        return pg;
+    public Page getPage() {
+        return page;
     }
 
     @Override
@@ -106,6 +120,10 @@ public class DataItemImpl implements DataItem{
         return oldRaw;
     }
 
+    /**
+     * 获取包含Data Item所有内容的字节数组
+     * @return
+     */
     @Override
     public SubArray getRaw() {
         return raw;

@@ -12,10 +12,29 @@ import org.minidb.common.exception.FileNotExistException;
 import java.io.File;
 
 public interface Logger {
+    /**
+     * 将一条新的日志加载至日志文件内
+     * @param data
+     */
     void log(byte[] data);
-    void truncate(long x) throws Exception;
-    byte[] getNextlogData();
+    /**
+     * 将日志文件截断至size大小
+     * @param size
+     * @throws Exception
+     */
+    void truncate(long size) throws Exception;
+    /**
+     * 读取日志拼文件，将一条日志的Data部分解析出来
+     * @return
+     */
+    byte[] getNextLogData();
+    /**
+     * 将日志指针倒回至第一个日志的起始处（总校验和的结尾）
+     */
     void rewind();
+    /**
+     * 关闭整个日志文件
+     */
     void close();
 
     static Logger create(String path) {

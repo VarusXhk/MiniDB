@@ -15,6 +15,7 @@ public class MessageConstant {
     public static final String MEMORY_SHORTAGE = "内存过小";
     public static final String DATA_OVERFLOW = "数据过大";
     public static final String DATABASE_BUSY = "数据库繁忙";
+    public static final String EMPTY_PAGE = "未能正确获取到该页面";
 
     // Messages in Transaction Manager
     public static final String BAD_XID_FILE = "XID文件已损坏";

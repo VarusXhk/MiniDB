@@ -1,7 +1,6 @@
 package org.minidb.common.Result;
 
 import org.minidb.backend.utils.Panic;
-import org.minidb.common.constant.TransactionConstant;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

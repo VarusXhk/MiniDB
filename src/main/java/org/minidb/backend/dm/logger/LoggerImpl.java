@@ -224,11 +224,11 @@ public class LoggerImpl implements Logger {
     }
 
     /**
-     * 读取日志拼接成的字节数组，将每一条日志的Data部分解析出来
+     * 读取日志拼文件，将一条日志的Data部分解析出来
      * @return
      */
     @Override
-    public byte[] getNextlogData() {
+    public byte[] getNextLogData() {
         lock.lock();
         try {
             byte[] log = getNextLog();

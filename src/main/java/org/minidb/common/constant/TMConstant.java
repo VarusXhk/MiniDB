@@ -1,6 +1,6 @@
 package org.minidb.common.constant;
 
-public class TransactionConstant {
+public class TMConstant {
     // XID文件头长度
     public static final int XID_HEADER_LENGTH = 8;
     // 每个事务的占用长度

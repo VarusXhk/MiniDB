@@ -11,25 +11,39 @@ public interface DataManager {
     long insert(long xid, byte[] data) throws Exception;
     void close();
 
-    public static DataManager create(String path, long mem, TransactionManager tm) {
-        PageCache pc = PageCache.create(path, mem);
-        Logger lg = Logger.create(path);
+    /**
+     * 在页面缓存和日志文件不存在时，创建页面缓存和日志文件、创建Data Manager
+     * @param path
+     * @param memory
+     * @param tm
+     * @return
+     */
+    static DataManager createDataManager(String path, long memory, TransactionManager tm) {
+        PageCache pageCache = PageCache.createPageCache(path, memory);
+        Logger logger = Logger.create(path);
 
-        DataManagerImpl dm = new DataManagerImpl(pc, lg, tm);
+        DataManagerImpl dm = new DataManagerImpl(pageCache, logger, tm);
         dm.initPageOne();
         return dm;
     }
 
-    public static DataManager open(String path, long mem, TransactionManager tm) {
-        PageCache pc = PageCache.open(path, mem);
-        Logger lg = Logger.open(path);
-        DataManagerImpl dm = new DataManagerImpl(pc, lg, tm);
+    /**
+     * 在页面缓存和日志文件存在时，打开页面缓存和日志文件、创建Data Manager
+     * @param path
+     * @param memory
+     * @param tm
+     * @return
+     */
+    static DataManager openDataManager(String path, long memory, TransactionManager tm) {
+        PageCache pageCache = PageCache.openPageCache(path, memory);
+        Logger logger = Logger.open(path);
+        DataManagerImpl dm = new DataManagerImpl(pageCache, logger, tm);
         if(!dm.loadCheckPageOne()) {
-            Recover.recover(tm, lg, pc);
+            Recover.recover(tm, logger, pageCache);
         }
         dm.fillPageIndex();
-        PageFirst.setValidCheckOpen(dm.pageOne);
-        dm.pc.flushPage(dm.pageOne);
+        PageFirst.setValidCheckStart(dm.pageFirst);
+        dm.pageCache.flushPage(dm.pageFirst);
 
         return dm;
     }

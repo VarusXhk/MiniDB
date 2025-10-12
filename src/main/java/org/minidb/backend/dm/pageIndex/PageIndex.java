@@ -7,10 +7,7 @@ import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Pageindex {
-    // 将一页划成40个区间
-    private static final int INTERVALS_NO = 40;
-    private static final int THRESHOLD = PageConstant.PAGE_SIZE / INTERVALS_NO;
+public class PageIndex {
 
     private Lock lock;
     private List<PageInfo>[] lists;
@@ -18,33 +15,43 @@ public class Pageindex {
     @SuppressWarnings("unchecked")
     public void PageIndex() {
         lock = new ReentrantLock();
-        lists = new List[INTERVALS_NO+1];
-        for (int i = 0; i < INTERVALS_NO+1; i ++) {
+        this.lists = new List[PageConstant.INTERVALS_NUMBER + 1];
+        for (int i = 0; i < PageConstant.INTERVALS_NUMBER + 1; i ++) {
             lists[i] = new ArrayList<>();
         }
     }
 
-    public void add(int pgno, int freeSpace) {
+    /**
+     *
+     * @param pageNumber
+     * @param freeSpace
+     */
+    public void add(int pageNumber, int freeSpace) {
         lock.lock();
         try {
-            int number = freeSpace / THRESHOLD;
-            lists[number].add(new PageInfo(pgno, freeSpace));
+            int number = freeSpace / PageConstant.INTERVAL_SIZE;
+            lists[number].add(new PageInfo(pageNumber, freeSpace));
         } finally {
             lock.unlock();
         }
     }
 
+    /**
+     *
+     * @param spaceSize
+     * @return
+     */
     public PageInfo select(int spaceSize) {
         lock.lock();
         try {
-            int number = spaceSize / THRESHOLD;
-            if(number < INTERVALS_NO) number ++;
-            while(number <= INTERVALS_NO) {
-                if(lists[number].size() == 0) {
+            int number = spaceSize / PageConstant.INTERVAL_SIZE;
+            if(number < PageConstant.INTERVALS_NUMBER) number ++;
+            while(number <= PageConstant.INTERVALS_NUMBER) {
+                if(lists[number].isEmpty()) {
                     number ++;
                     continue;
                 }
-                return lists[number].remove(0);
+                return lists[number].removeFirst();
             }
             return null;
         } finally {
